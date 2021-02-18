@@ -1,4 +1,6 @@
-PyQt5==5.15.2
-selenium==3.141.0
-PyQt5-stubs==5.14.2.2
-pyqt5-tools==5.15.2.3.0.2
+PyQt5
+selenium
+PyQt5-stubs
+pyqt5-tools
+numpy
+requests
