@@ -3,20 +3,19 @@ import time
 import os
 import sys
 
+
 from PyQt5.QtWidgets import QFileDialog
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
-
 from selenium.common.exceptions import *
 from PyQt5 import QtWidgets
-
 from PyQt5.QtGui import QIcon
 
 
 from ui import Ui_MainWindow
-from utils import split_receivers
-import threading
+from utils import split_receivers, captcha_three
+
 
 class MailSender(QtWidgets.QMainWindow):
     def __init__(self):
@@ -32,10 +31,10 @@ class MailSender(QtWidgets.QMainWindow):
         chrome_options.add_argument("--start-maximized")
         self.driver = webdriver.Chrome(options=chrome_options, executable_path=driver_path + '/chromedriver')
 
-
     def init_UI(self):
         self.setWindowIcon(QIcon('mail.png'))
         self.ui.start_work.clicked.connect(self.main)
+        self.ui.start_work.hide()
         self.ui.check_field.clicked.connect(self.check_all_field_data)
         self.ui.file_1_button.clicked.connect(self.load_first_file_path)
         self.ui.file_2_button_2.clicked.connect(self.load_second_file_path)
@@ -124,9 +123,11 @@ class MailSender(QtWidgets.QMainWindow):
         messages_subject = self.ui.message_subject.text()
         messages_text = self.ui.messages_text.toPlainText()
         attach_send_delay = int(self.ui.attach_delay.text())
+        captcha_api_key = self.ui.captcha_api_key.text()
 
         if (len(sender_email_list) <= 0 or len(receiver_email_list) <= 0) or \
-                (len(messages_subject) <= 0 or len(messages_text) <= 0) or (attach_send_delay <= 0):
+                (len(messages_subject) <= 0 or len(messages_text) <= 0) or (attach_send_delay <= 0) or \
+                len(captcha_api_key) <= 0:
             self.write_logs('Похоже какое-то поле пустое(вложения можно оставить пустыми)', 'warning')
             self.ui.start_work.hide()
 
@@ -138,7 +139,7 @@ class MailSender(QtWidgets.QMainWindow):
         if int(len(attachment_files)) < 0:
             self.write_logs('Внимание, письма будут без вложений. Вы не внесли никаких данных о вложениях', 'info')
 
-    def my_send_mail(self, receiver, attach, subject, email_text, attach_send_delay):
+    def my_send_mail(self, receiver, attach, subject, email_text, attach_send_delay, captcha_api_key):
         self.driver.find_element_by_class_name('mail-ComposeButton-Text').click()
         time.sleep(2)
         #  Кому шлем
@@ -166,13 +167,13 @@ class MailSender(QtWidgets.QMainWindow):
                 self.driver.find_element_by_class_name('WithUpload-FileInput').send_keys(f)
                 #  .send_keys(f'/Users/aleksandrmoskalenko/Downloads/mailer/{f}')
                 time.sleep(attach_send_delay)
-
+        
         #  отправить
         self.driver.find_element_by_xpath("//button[@data-lego='react'][contains(.,'Отправить')]").click()
         time.sleep(2)
         if 'Чтобы отправить его, дождитесь завершения загрузки вложений или удалите их.' in self.driver.page_source:
             print('Похоже вложения не успели прогрузится, подождем загрузки(15 сек)')
-            time.sleep(15)
+            time.sleep(15)  # даем время на прогрузку
             try:
                 #  закрываем окно с инфой о том, что не прогружены вложения
                 webdriver.ActionChains(self.driver).send_keys(Keys.ESCAPE).perform()
@@ -182,50 +183,40 @@ class MailSender(QtWidgets.QMainWindow):
             except NoSuchElementException:
                 pass
                 #  отправить
-                #self.driver.find_element_by_xpath("//button[@data-lego='react'][contains(.,'Отправить')]").click()
-
+                #  self.driver.find_element_by_xpath("//button[@data-lego='react'][contains(.,'Отправить')]").click()
         if 'ComposeReactCaptcha' in self.driver.page_source or \
                 'Ваше письмо пока не отправлено, потому что кажется очень похожим на спам.' in self.driver.page_source:
             print('Поймали капчу')
-            # ComposeReactCaptcha-Image - класс с src='линкой на изображений' его же передаем в rucaptcha
-            #  ComposeReactCaptcha-Input
-            print('Время на разгадку: 40 секунд')
-            sleep_time = 40
-            t = 1
-            while t <= sleep_time:
-                time.sleep(1)
-                print(f'Времени осталось:{sleep_time-t} сек.')
-                t += 1
-                if t == sleep_time:
-                    break
+            time.sleep(3)
+            while True:
+                captcha_solve_data = captcha_three(self.driver.page_source, captcha_api_key)
+                time.sleep(3)
+                # обрабатываем капчу
+                captcha_input = self.driver.find_element_by_class_name('ComposeReactCaptcha-Input')
+                captcha_input.send_keys(captcha_solve_data)
+                captcha_input.send_keys(Keys.ENTER)
+                time.sleep(3)
+                if 'ComposeReactCaptcha' in self.driver.page_source:
+                    print('Капча не верная, посылаем еще раз...')
+                    continue
+                time.sleep(5)
+                if 'ComposeReactCaptcha' not in self.driver.page_source:
+                    print('Капча рагадана.')
+                    break  # Если нет инфы о капче в коде - выходим и продолжаем рассылку
 
-
-            # Если не найдена инфа о капче - значит ввели
-            if 'Внимание! Ваше письмо пока не отправлено' not in self.driver.page_source:
+            if 'Нельзя отправить письмо, потому что оно кажется похожим на спам.' not in self.driver.page_source:
                 try:
+
                     self.driver.find_element_by_xpath("//button[@data-lego='react'][contains(.,'Отправить')]").click()
                     time.sleep(3)
                 except NoSuchElementException:
                     pass
 
-            # driver.find_element_by_class_name('ComposeReactCaptcha-Input')
-            # try:
-            # driver.find_element_by_class_name('ComposeConfirmPopup-Close').click()
-            #  отправить
-            # driver.find_element_by_xpath("//button[@data-lego='react'][contains(.,'Отправить')]").click()
-            # except:
-            # print('что то не получилось закрыть')
-
-            # driver.find_element_by_xpath("//button[@data-lego='react'][contains(.,'Отправить')]").click()
-
-        # write_logs(f'Отправили сообщение на почту: {receiver}', 'notif')
-        # print(f'Отправили сообщение на почту: {receiver}', 'notif')
-        # total_messages_send += 1
         print(f'Отправили:{receiver}')
         time.sleep(1)
 
     def auth_mail(self, data_list, attach, subject, email_text, default_password_for_email,
-                  attach_send_delay):
+                  attach_send_delay, captcha_api_key):
         for email, items in data_list.items():
             print(f'Авторизуемся с аккаунта: {email}')
             self.driver.get(
@@ -250,7 +241,7 @@ class MailSender(QtWidgets.QMainWindow):
                 pass
             for item in items:
                 if 'Написать' in self.driver.page_source:
-                    self.my_send_mail(item, attach, subject, email_text, attach_send_delay)
+                    self.my_send_mail(item, attach, subject, email_text, attach_send_delay, captcha_api_key)
 
         self.ui.logs_data.appendPlainText('Работа завершена')
         self.driver.close()
@@ -266,13 +257,12 @@ class MailSender(QtWidgets.QMainWindow):
         email_text = self.ui.messages_text.toPlainText()  # текст сообщений
         default_password_for_email = self.ui.default_password.text()  # стандартный пароль для аккаунтов-отправителей
         attach_send_delay = int(self.ui.attach_delay.text())  # зажержка перед отправление вложений
-        self.auth_mail(data_list, attachment_files, subject, email_text, default_password_for_email, attach_send_delay)
+        captcha = self.ui.captcha_api_key.text()
+        self.auth_mail(data_list, attachment_files, subject, email_text, default_password_for_email,
+                       attach_send_delay, captcha)
 
 
 app = QtWidgets.QApplication([])
 application = MailSender()
 application.show()
-
-
-
 sys.exit(app.exec_())
