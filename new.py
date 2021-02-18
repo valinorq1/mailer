@@ -29,7 +29,8 @@ class MailSender(QtWidgets.QMainWindow):
         chrome_options = Options()
         chrome_options.add_argument('--log-level=3')
         chrome_options.add_argument("--start-maximized")
-        self.driver = webdriver.Chrome(options=chrome_options, executable_path=driver_path + '/chromedriver')
+        #  executable_path=driver_path + '/chromedriver'
+        self.driver = webdriver.Chrome(options=chrome_options, executable_path='/Users/aleksandrmoskalenko/Downloads/chromedriver')
 
     def init_UI(self):
         self.setWindowIcon(QIcon('mail.png'))
