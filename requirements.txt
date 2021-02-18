@@ -4,3 +4,4 @@ PyQt5-stubs
 pyqt5-tools
 numpy
 requests
+2captcha-python
