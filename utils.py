@@ -12,6 +12,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 DOWNLOADED_CAPTCHA = []
 
 
+
+
 def split_receivers(receivers, senders):
     count_for_sender = int(len(receivers) / len(senders))
     chunk_count = int(len(receivers) / count_for_sender)
@@ -21,7 +23,7 @@ def split_receivers(receivers, senders):
 
 def get_captcha_url(html):
     soup = BeautifulSoup(html, "html.parser")
-    capcha_block = soup.find('div', {'class': 'ComposeReactCaptcha-ImageContainer'})
+    capcha_block = soup.find('div', {'class': 'b-captcha__info'})
     images = capcha_block.find_all('img')
     for img in images:
         if img.has_attr('src'):
