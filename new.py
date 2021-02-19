@@ -12,7 +12,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtGui import QIcon
 
 from ui import Ui_MainWindow
-from utils_new import split_receivers, captcha_three
+from utils import split_receivers, captcha_three
 
 
 class MailSender(QtWidgets.QMainWindow):
@@ -27,7 +27,7 @@ class MailSender(QtWidgets.QMainWindow):
         chrome_options = Options()
         chrome_options.add_argument('--log-level=3')
         chrome_options.add_argument("--start-maximized")
-        self.driver = webdriver.Chrome(options=chrome_options, executable_path=driver_path + '/chromedriver')
+        self.driver = webdriver.Chrome(options=chrome_options, executable_path='/Users/aleksandrmoskalenko/Downloads/mailer/chromedriver')
 
     def init_UI(self):
         self.setWindowIcon(QIcon('mail.png'))
