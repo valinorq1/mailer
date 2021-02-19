@@ -3,7 +3,6 @@ import time
 import os
 import sys
 
-
 from PyQt5.QtWidgets import QFileDialog
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -12,9 +11,8 @@ from selenium.common.exceptions import *
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QIcon
 
-
 from ui import Ui_MainWindow
-from utils import split_receivers, captcha_three
+from utils_new import split_receivers, captcha_three
 
 
 class MailSender(QtWidgets.QMainWindow):
@@ -29,8 +27,7 @@ class MailSender(QtWidgets.QMainWindow):
         chrome_options = Options()
         chrome_options.add_argument('--log-level=3')
         chrome_options.add_argument("--start-maximized")
-        #  executable_path=driver_path + '/chromedriver'
-        self.driver = webdriver.Chrome(options=chrome_options, executable_path='/Users/aleksandrmoskalenko/Downloads/chromedriver')
+        self.driver = webdriver.Chrome(options=chrome_options, executable_path=driver_path + '/chromedriver')
 
     def init_UI(self):
         self.setWindowIcon(QIcon('mail.png'))
@@ -42,6 +39,9 @@ class MailSender(QtWidgets.QMainWindow):
         self.ui.file_3_button.clicked.connect(self.load_third_file_path)
         self.ui.file_4_button.clicked.connect(self.load_forth_file_path)
 
+
+    def close_win(self):
+        self.close()
 
     def write_logs(self, log_text, status_color):
         if status_color == 'warning':
@@ -141,36 +141,32 @@ class MailSender(QtWidgets.QMainWindow):
             self.write_logs('Внимание, письма будут без вложений. Вы не внесли никаких данных о вложениях', 'info')
 
     def my_send_mail(self, receiver, attach, subject, email_text, attach_send_delay, captcha_api_key):
-        self.driver.find_element_by_class_name('mail-ComposeButton-Text').click()
-        time.sleep(2)
+        self.driver.find_element_by_xpath("//i[@class='b-toolbar__but__i'][contains(.,'Написать')]").click()
+        time.sleep(1)
         #  Кому шлем
-        try:
-            to = self.driver.find_element_by_class_name('composeYabbles')
-            to.send_keys(receiver)
-            to.send_keys(Keys.ENTER)
-        except NoSuchElementException:
-            time.sleep(3)
-            self.driver.find_element_by_class_name('composeYabbles').clear()
-            to = self.driver.find_element_by_class_name('composeYabbles')
-            to.send_keys(receiver)
-            to.send_keys(Keys.ENTER)
+
+        to = self.driver.find_element_by_xpath("//input[contains(@name,'to')]")
+        to.send_keys(receiver)
+        to.send_keys(Keys.TAB)
 
         # тема
-        subj = self.driver.find_element_by_class_name('composeTextField')
+        subj = self.driver.find_element_by_xpath("//input[contains(@name,'subj')]")
         subj.send_keys(subject)
         subj.send_keys(Keys.TAB)
         # текст
-        body_text = self.driver.find_element_by_xpath("//div[contains(@class,'htmlplaceholder')]")
+        body_text = self.driver.find_element_by_xpath("//textarea[@aria-label='Тело письма']")
         body_text.send_keys(email_text)
         # Вложения
-        if len(attach) >= 1:
+        if len(attach) <= 0: #  если вложений нет ничего не делаем
+            pass
+        elif len(attach) >=1:
             for f in attach:
-                self.driver.find_element_by_class_name('WithUpload-FileInput').send_keys(f)
+                self.driver.find_element_by_xpath("(//input[contains(@class,'file')])[1]").send_keys(f)
                 #  .send_keys(f'/Users/aleksandrmoskalenko/Downloads/mailer/{f}')
                 time.sleep(attach_send_delay)
-        
+
         #  отправить
-        self.driver.find_element_by_xpath("//button[@data-lego='react'][contains(.,'Отправить')]").click()
+        self.driver.find_element_by_xpath("//input[contains(@value,'Отправить')]").click()
         time.sleep(2)
         if 'Чтобы отправить его, дождитесь завершения загрузки вложений или удалите их.' in self.driver.page_source:
             print('Похоже вложения не успели прогрузится, подождем загрузки(15 сек)')
@@ -185,33 +181,25 @@ class MailSender(QtWidgets.QMainWindow):
                 pass
                 #  отправить
                 #  self.driver.find_element_by_xpath("//button[@data-lego='react'][contains(.,'Отправить')]").click()
-        if 'ComposeReactCaptcha' in self.driver.page_source or \
-                'Ваше письмо пока не отправлено, потому что кажется очень похожим на спам.' in self.driver.page_source:
+        if 'b-captcha' in self.driver.page_source:
             print('Поймали капчу')
             time.sleep(3)
             while True:
                 captcha_solve_data = captcha_three(self.driver.page_source, captcha_api_key)
                 time.sleep(3)
                 # обрабатываем капчу
-                captcha_input = self.driver.find_element_by_class_name('ComposeReactCaptcha-Input')
+                captcha_input = self.driver.find_element_by_xpath("//input[contains(@name,'captcha_entered')]")
                 captcha_input.send_keys(captcha_solve_data)
-                captcha_input.send_keys(Keys.ENTER)
+                self.driver.find_element_by_xpath("(//input[@type='submit'])[3]").click()
                 time.sleep(3)
-                if 'ComposeReactCaptcha' in self.driver.page_source:
+                if 'b-captcha' in self.driver.page_source:
                     print('Капча не верная, посылаем еще раз...')
                     continue
                 time.sleep(5)
-                if 'ComposeReactCaptcha' not in self.driver.page_source:
+                if 'b-captcha' not in self.driver.page_source:
                     print('Капча рагадана.')
                     break  # Если нет инфы о капче в коде - выходим и продолжаем рассылку
 
-            if 'Нельзя отправить письмо, потому что оно кажется похожим на спам.' not in self.driver.page_source:
-                try:
-
-                    self.driver.find_element_by_xpath("//button[@data-lego='react'][contains(.,'Отправить')]").click()
-                    time.sleep(3)
-                except NoSuchElementException:
-                    pass
 
         print(f'Отправили:{receiver}')
         time.sleep(1)
@@ -240,12 +228,23 @@ class MailSender(QtWidgets.QMainWindow):
                 time.sleep(7)
             except NoSuchElementException:
                 pass
+            if 'Все письма по полочкам' in self.driver.page_source:
+                try:
+                    self.driver.find_element_by_xpath(
+                        '//*[@id="nb-1"]/body/div[7]/div/div/div/div/div/div/div/div[2]/div[4]/button[1]').click()
+                except NoSuchElementException:
+                    try:
+                        self.driver.find_element_by_class_name('mail-Wizard-Close').click()
+                    except NoSuchElementException:
+                        self.driver.find_element_by_class_name('mail-Layout-Inner').send_keys(Keys.ESCAPE)
+            self.driver.get('https://mail.yandex.ru/lite/')
             for item in items:
                 if 'Написать' in self.driver.page_source:
                     self.my_send_mail(item, attach, subject, email_text, attach_send_delay, captcha_api_key)
 
         self.ui.logs_data.appendPlainText('Работа завершена')
-        self.driver.close()
+        time.sleep(120)
+        #self.driver.close()
 
     def main(self):
         """ Собираем данные с полей """
@@ -259,8 +258,10 @@ class MailSender(QtWidgets.QMainWindow):
         default_password_for_email = self.ui.default_password.text()  # стандартный пароль для аккаунтов-отправителей
         attach_send_delay = int(self.ui.attach_delay.text())  # зажержка перед отправление вложений
         captcha = self.ui.captcha_api_key.text()
+        #self.close_win()
         self.auth_mail(data_list, attachment_files, subject, email_text, default_password_for_email,
                        attach_send_delay, captcha)
+
 
 
 app = QtWidgets.QApplication([])
