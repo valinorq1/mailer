@@ -12,7 +12,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtGui import QIcon
 
 from ui import Ui_MainWindow
-from utils import split_receivers, captcha_three
+from utils import split_list, captcha_three
 
 
 class MailSender(QtWidgets.QMainWindow):
@@ -251,7 +251,7 @@ class MailSender(QtWidgets.QMainWindow):
         senders = self.load_sender_list()  # загружаем список аккаунтов откуда будем отправлять письма
         receiver = self.load_receiver_list()
 
-        data_list = split_receivers(receiver, senders)  # список со вложенными емайлами
+        data_list = split_receivers(receiver, len(senders), senders)  # список со вложенными емайлами
         attachment_files = self.get_file_names()  # читаем файлы вложения
         subject = self.ui.message_subject.text()  # тема сообщений
         email_text = self.ui.messages_text.toPlainText()  # текст сообщений
