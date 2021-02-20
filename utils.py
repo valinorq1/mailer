@@ -14,11 +14,19 @@ DOWNLOADED_CAPTCHA = []
 
 
 
-def split_receivers(receivers, senders):
-    count_for_sender = int(len(receivers) / len(senders))
-    chunk_count = int(len(receivers) / count_for_sender)
-    chunked_receivers = np.array_split(receivers, chunk_count)
-    return {s: r.tolist() for s, r in zip(senders, chunked_receivers)}
+def split_list(alist, wanted_parts, sender):
+    sender_to_dict_keys = {}
+    for i in sender:
+        sender_to_dict_keys[i] = 0
+    print('ss',sender_to_dict_keys)
+    length = len(alist)
+    q = [ alist[i*length // wanted_parts: (i+1)*length // wanted_parts]
+             for i in range(wanted_parts)]
+
+    for z, v in zip(q, sender_to_dict_keys.keys()):
+        sender_to_dict_keys[v] = z
+    print('Полученый лист:', sender_to_dict_keys)
+    return sender_to_dict_keys
 
 
 def get_captcha_url(html):
