@@ -3,6 +3,7 @@ import time
 import os
 import sys
 
+
 from PyQt5.QtWidgets import QFileDialog
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -13,7 +14,6 @@ from PyQt5.QtGui import QIcon
 
 from ui import Ui_MainWindow
 from utils import split_list, captcha_three
-
 
 class MailSender(QtWidgets.QMainWindow):
     def __init__(self):
@@ -28,7 +28,7 @@ class MailSender(QtWidgets.QMainWindow):
         chrome_options.add_argument('--log-level=3')
         chrome_options.add_argument("--start-maximized")
         self.driver = webdriver.Chrome(options=chrome_options, executable_path='/Users/aleksandrmoskalenko/Downloads/mailer/chromedriver')
-
+        
     def init_UI(self):
         self.setWindowIcon(QIcon('mail.png'))
         self.ui.start_work.clicked.connect(self.main)
@@ -38,7 +38,6 @@ class MailSender(QtWidgets.QMainWindow):
         self.ui.file_2_button_2.clicked.connect(self.load_second_file_path)
         self.ui.file_3_button.clicked.connect(self.load_third_file_path)
         self.ui.file_4_button.clicked.connect(self.load_forth_file_path)
-
 
     def close_win(self):
         self.close()
@@ -156,10 +155,8 @@ class MailSender(QtWidgets.QMainWindow):
         # текст
         body_text = self.driver.find_element_by_xpath("//textarea[@aria-label='Тело письма']")
         body_text.send_keys(email_text)
-        # Вложения
-        if len(attach) <= 0: #  если вложений нет ничего не делаем
-            pass
-        elif len(attach) >=1:
+        #  Вложения
+        if len(attach) >= 1:
             for f in attach:
                 self.driver.find_element_by_xpath("(//input[contains(@class,'file')])[1]").send_keys(f)
                 #  .send_keys(f'/Users/aleksandrmoskalenko/Downloads/mailer/{f}')
@@ -199,7 +196,6 @@ class MailSender(QtWidgets.QMainWindow):
                 if 'b-captcha' not in self.driver.page_source:
                     print('Капча рагадана.')
                     break  # Если нет инфы о капче в коде - выходим и продолжаем рассылку
-
 
         print(f'Отправили:{receiver}')
         time.sleep(1)
@@ -244,7 +240,7 @@ class MailSender(QtWidgets.QMainWindow):
 
         self.ui.logs_data.appendPlainText('Работа завершена')
         time.sleep(120)
-        #self.driver.close()
+        self.driver.close()
 
     def main(self):
         """ Собираем данные с полей """
@@ -258,10 +254,9 @@ class MailSender(QtWidgets.QMainWindow):
         default_password_for_email = self.ui.default_password.text()  # стандартный пароль для аккаунтов-отправителей
         attach_send_delay = int(self.ui.attach_delay.text())  # зажержка перед отправление вложений
         captcha = self.ui.captcha_api_key.text()
-        #self.close_win()
+        self.close_win()
         self.auth_mail(data_list, attachment_files, subject, email_text, default_password_for_email,
                        attach_send_delay, captcha)
-
 
 
 app = QtWidgets.QApplication([])
