@@ -3,7 +3,6 @@ import time
 import os
 import sys
 
-
 from PyQt5.QtWidgets import QFileDialog
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -14,6 +13,7 @@ from PyQt5.QtGui import QIcon
 
 from ui import Ui_MainWindow
 from utils import split_list, captcha_three
+
 
 class MailSender(QtWidgets.QMainWindow):
     def __init__(self):
@@ -27,8 +27,10 @@ class MailSender(QtWidgets.QMainWindow):
         chrome_options = Options()
         chrome_options.add_argument('--log-level=3')
         chrome_options.add_argument("--start-maximized")
+        #self.driver = webdriver.Chrome(options=chrome_options,
+                                       #executable_path=os.getcwd() + './chromedriver')
         self.driver = webdriver.Chrome(options=chrome_options, executable_path='/Users/aleksandrmoskalenko/Downloads/mailer/chromedriver')
-        
+
     def init_UI(self):
         self.setWindowIcon(QIcon('mail.png'))
         self.ui.start_work.clicked.connect(self.main)
@@ -163,8 +165,8 @@ class MailSender(QtWidgets.QMainWindow):
                 time.sleep(attach_send_delay)
 
         #  отправить
-        self.driver.find_element_by_xpath("//input[contains(@value,'Отправить')]").click()
-        time.sleep(2)
+        self.driver.find_element_by_xpath("//input[contains(@name,'doit')]").click()
+        time.sleep(3)
         if 'Чтобы отправить его, дождитесь завершения загрузки вложений или удалите их.' in self.driver.page_source:
             print('Похоже вложения не успели прогрузится, подождем загрузки(15 сек)')
             time.sleep(15)  # даем время на прогрузку
@@ -183,19 +185,29 @@ class MailSender(QtWidgets.QMainWindow):
             time.sleep(3)
             while True:
                 captcha_solve_data = captcha_three(self.driver.page_source, captcha_api_key)
-                time.sleep(3)
+                time.sleep(5)
                 # обрабатываем капчу
                 captcha_input = self.driver.find_element_by_xpath("//input[contains(@name,'captcha_entered')]")
                 captcha_input.send_keys(captcha_solve_data)
-                self.driver.find_element_by_xpath("(//input[@type='submit'])[3]").click()
+                #self.driver.find_element_by_xpath("(//input[@type='submit'])[3]").click()
+                self.driver.find_element_by_xpath("(//input[@name='doit'])[2]").click()
                 time.sleep(3)
                 if 'b-captcha' in self.driver.page_source:
                     print('Капча не верная, посылаем еще раз...')
+                    time.sleep(5)
                     continue
-                time.sleep(5)
-                if 'b-captcha' not in self.driver.page_source:
-                    print('Капча рагадана.')
-                    break  # Если нет инфы о капче в коде - выходим и продолжаем рассылку
+                #elif 'b-captcha' not in self.driver.page_source: # капча верная, можно продолжать
+                    #self.driver.find_element_by_class_name('b-compose__send').click()
+                   # print('Капча рагадана.')
+                    #break  # Если нет инфы о капче в коде - выходим и продолжаем рассылку
+                else:
+                    break
+
+
+                #if 'b-captcha' not in self.driver.page_source:
+                    #self.driver.find_element_by_xpath("//input[contains(@class,'b-form-button b-compose__send')]").click()
+                    #print('Капча рагадана.')
+                    #break  # Если нет инфы о капче в коде - выходим и продолжаем рассылку
 
         print(f'Отправили:{receiver}')
         time.sleep(3)
