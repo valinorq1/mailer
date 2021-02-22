@@ -27,9 +27,9 @@ class MailSender(QtWidgets.QMainWindow):
         chrome_options = Options()
         chrome_options.add_argument('--log-level=3')
         chrome_options.add_argument("--start-maximized")
-        #self.driver = webdriver.Chrome(options=chrome_options,
-                                       #executable_path=os.getcwd() + './chromedriver')
-        self.driver = webdriver.Chrome(options=chrome_options, executable_path='/Users/aleksandrmoskalenko/Downloads/mailer/chromedriver')
+        self.driver = webdriver.Chrome(options=chrome_options,
+                                       executable_path=os.getcwd() + './chromedriver')
+        #self.driver = webdriver.Chrome(options=chrome_options, executable_path='/Users/aleksandrmoskalenko/Downloads/mailer/chromedriver')
 
     def init_UI(self):
         self.setWindowIcon(QIcon('mail.png'))
@@ -190,24 +190,18 @@ class MailSender(QtWidgets.QMainWindow):
                 captcha_input = self.driver.find_element_by_xpath("//input[contains(@name,'captcha_entered')]")
                 captcha_input.send_keys(captcha_solve_data)
                 #self.driver.find_element_by_xpath("(//input[@type='submit'])[3]").click()
-                self.driver.find_element_by_xpath("(//input[@name='doit'])[2]").click()
+                self.driver.find_element_by_xpath("(//input[contains(@name,'doit')])[1]").click()
+
+                time.sleep(3)
+                self.driver.find_element_by_xpath("//input[@name='doit']").click()
                 time.sleep(3)
                 if 'b-captcha' in self.driver.page_source:
                     print('Капча не верная, посылаем еще раз...')
                     time.sleep(5)
                     continue
-                #elif 'b-captcha' not in self.driver.page_source: # капча верная, можно продолжать
-                    #self.driver.find_element_by_class_name('b-compose__send').click()
-                   # print('Капча рагадана.')
-                    #break  # Если нет инфы о капче в коде - выходим и продолжаем рассылку
                 else:
                     break
 
-
-                #if 'b-captcha' not in self.driver.page_source:
-                    #self.driver.find_element_by_xpath("//input[contains(@class,'b-form-button b-compose__send')]").click()
-                    #print('Капча рагадана.')
-                    #break  # Если нет инфы о капче в коде - выходим и продолжаем рассылку
 
         print(f'Отправили:{receiver}')
         time.sleep(3)
