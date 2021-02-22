@@ -141,7 +141,7 @@ class MailSender(QtWidgets.QMainWindow):
 
     def my_send_mail(self, receiver, attach, subject, email_text, attach_send_delay, captcha_api_key):
         self.driver.find_element_by_xpath("//i[@class='b-toolbar__but__i'][contains(.,'Написать')]").click()
-        time.sleep(1)
+        time.sleep(3)
         #  Кому шлем
 
         to = self.driver.find_element_by_xpath("//input[contains(@name,'to')]")
@@ -198,7 +198,7 @@ class MailSender(QtWidgets.QMainWindow):
                     break  # Если нет инфы о капче в коде - выходим и продолжаем рассылку
 
         print(f'Отправили:{receiver}')
-        time.sleep(1)
+        time.sleep(3)
 
     def auth_mail(self, data_list, attach, subject, email_text, default_password_for_email,
                   attach_send_delay, captcha_api_key):
